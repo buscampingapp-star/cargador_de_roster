@@ -1,0 +1,23 @@
+# Archivos de base de datos
+*.db
+
+# Archivos de Excel
+*.xlsx
+*.xls
+
+# Archivos temporales
+*.log
+*.tmp
+
+# Carpetas de entorno virtual
+venv/
+env/
+
+# Archivos de configuración de IDE
+.vscode/
+.idea/
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+*.pyo
