@@ -2,6 +2,39 @@ import pandas as pd
 import re
 
 class RosterModel:
+    # Diccionario centralizado de columnas esperadas por hoja
+    COLUMNAS_ESPERADAS = {
+        "Agents": [
+            "ACM", "Supervisor", "Last Name", "First Name", "Monday", "Tuesday", "Wednesday",
+            "Thursday", "Friday", "Saturday", "Sunday", "Wave  / Ingreso", "Comments", "Type",
+            "Mon Hrs.", "Tue Hrs.", "Wed Hrs.", "Thu Hrs.", "Fri Hrs.", "Sat Hrs.", "Sun Hrs.",
+            "Scheduled Hrs.", "ACDID", "Agent´s Payroll Number", "CCMSID", "LOB", "Secondary Skill",
+            "Set Skill Programado", "Equipo Específico", "Detalle de función", "Supervisor´s Payroll Number",
+            "ACM´s Payroll Number", "NT Loguin", "TPSouth Hire Date", "Project Hire Date", "Production Hire Date",
+            "Tenure", "Site", "Status", "WAHA", "VM", "Disponibilidad de horarios", "RUT / DNI", "RUT 2 / CUIL",
+            "Telephone Number", "Mail", "Address", "Municipality", "Log ID", "Extension", "CRM RRSS", "BackOffice",
+            "Tools #1", "Tools #2", "Tools #3", "Tools #4", "Skill #1", "Skill #2", "Skill #3", "Skill Detail",
+            "Start of Vacation", "End of Vacations", "Advance Payment"
+        ],
+        "Sups": [
+            "ACM", "Supervisor", "Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday",
+            "Supervisor´s Payroll Number", "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID",
+            "User Tool", "Skill", "Equipo Específico", "Detalle de función", "NT Login", "Start of Vacation",
+            "End of Vacations", "Advance Payment", "Comments", "Disponibilidad de horarios"
+        ],
+        "ACMs": [
+            "CCM", "ACM","Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday",
+            "ACM´s Payroll Number", "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID",
+            "User Tool", "Skill", "Equipo Específico", "Detalle de función", "NT Login", "Start of Vacation",
+            "End of Vacations", "Advance Payment", "Comments", "Disponibilidad de horarios"
+        ],
+        "CCMs": [
+            "Gerente", "CCM", "Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday",
+            "CCM´s Payroll Number", "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID",
+            "User Tool", "Skill", "Equipo Específico", "Detalle de función", "NT Login"
+        ]
+    }
+
     def __init__(self, filepath):
         self.filepath = filepath
         self.dataframes = {}
@@ -19,7 +52,7 @@ class RosterModel:
         nombre_archivo = self.filepath.split("/")[-1]
         match = re.search(r"(PV|Final Roster)\s+(\d{4}-\d{4})", nombre_archivo)
         if not match:
-            return None, None, ["El nombre del archivo no contiene un indicador válido (PV/Roster Final) y un código de semana (####-####)."]
+            return None, None, ["El nombre del archivo no contiene un indicador válido (PV/Final Roster) y un código de semana (####-####)."]
         indicador = match.group(1)
         codigo_semana = match.group(2)
         return indicador, codigo_semana, []
@@ -27,29 +60,7 @@ class RosterModel:
     def validar_columnas(self, indicador, codigo_semana):
         """Valida que las hojas tengan las columnas correctas"""
         errores = []
-
-        # Diccionario de cabeceras esperadas por hoja
-        columnas_esperadas = {
-            "Agents": ["ACM", "Supervisor", "Last Name", "First Name", "First Name", "Monday", "Tuesday", "Wednesday",
-                        "Thursday", "Friday", "Saturday", "Sunday", "Wave  / Ingreso", "Sunday", "Comments", "Type", "Mon Hrs.", "Tue Hrs.",
-                        "Wed Hrs.", "Thu Hrs.", "Fri Hrs.", "Sat Hrs.", "Sun Hrs.", "Scheduled Hrs.", "ACDID", "Agent´s Payroll Number", "CCMSID",
-                        "LOB", "Secondary Skill", "Set Skill Programado", "Equipo Específico", "Detalle de función", "Supervisor´s Payroll Number",
-                        "ACM´s Payroll Number", "NT Loguin", "TPSouth Hire Date", "Project Hire Date", "Production Hire Date", "Tenure", "Site",
-                        "Status", "WAHA", "VM", "Disponibilidad de horarios", "RUT / DNI", "RUT 2 / CUIL", "Telephone Number", "Mail", "Address",
-                        "Municipality", "Log ID", "Extension", "CRM RRSS", "BackOffice", "Tools #1", "Tools #2", "Tools #3", "Tools #4", "Skill #1",
-                        "Skill #2", "Skill #3", "Skill Detail", "Start of Vacation", "End of Vacations", "Advance Payment"],
-            "Sups":   ["ACM", "Supervisor", "Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday", "Supervisor´s Payroll Number",
-                       "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID", "User Tool", "Skill", "Equipo Específico", "Detalle de función", 
-                       "NT Login", "Start of Vacation", "End of Vacations", "Advance Payment", "Comments", "Disponibilidad de horarios"],
-            "ACMs":   ["CCM", "ACM","Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday","ACM´s Payroll Number",
-                       "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID", "User Tool", "Skill", "Equipo Específico", "Detalle de función", 
-                       "NT Login", "Start of Vacation", "End of Vacations", "Advance Payment", "Comments", "Disponibilidad de horarios"],
-            "CCMs":   ["Gerente", "CCM", "Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday","CCM´s Payroll Number",
-                       "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID", "User Tool", "Skill", "Equipo Específico", "Detalle de función", 
-                       "NT Login"]
-        }
-
-        for hoja_base, columnas in columnas_esperadas.items():
+        for hoja_base, columnas in self.COLUMNAS_ESPERADAS.items():
             nombre_hoja = f"{hoja_base} {indicador} {codigo_semana}"
             if nombre_hoja in self.dataframes:
                 df = self.dataframes[nombre_hoja]
@@ -72,18 +83,30 @@ class RosterModel:
                         errores.append(f"En hoja '{nombre_hoja}' existe columna inesperada: {col}")
             else:
                 errores.append(f"No se encontró la hoja: {nombre_hoja}")
+        return errores
 
+    def validar_celdas_vacias(self, indicador, codigo_semana):
+        """Valida que no existan celdas vacías en las columnas obligatorias"""
+        errores = []
+        for hoja_base, columnas in self.COLUMNAS_ESPERADAS.items():
+            nombre_hoja = f"{hoja_base} {indicador} {codigo_semana}"
+            if nombre_hoja in self.dataframes:
+                df = self.dataframes[nombre_hoja]
+                for col in columnas:
+                    if col in df.columns:
+                        filas_vacias = df[df[col].isnull() | (df[col].astype(str).str.strip() == "")]
+                        for idx in filas_vacias.index:
+                            errores.append(
+                                f"En hoja '{nombre_hoja}' la celda en fila {idx+2}, columna '{col}' está vacía."
+                            )
         return errores
 
     def validar(self):
         errores = []
-
-        # 1. Extraer indicador y código del archivo
         indicador, codigo_semana, errores_codigo = self.validar_codigo_archivo()
         errores.extend(errores_codigo)
 
         if indicador and codigo_semana:
-            # 2. Validar hojas obligatorias y consistencia de código
             hojas_obligatorias = ["Agents", "Sups", "ACMs", "CCMs"]
             hojas_encontradas = list(self.dataframes.keys())
 
@@ -98,7 +121,7 @@ class RosterModel:
                             f"El código del archivo ({codigo_semana}) no coincide con la hoja '{coincidencias[0]}'."
                         )
 
-            # 3. Validar columnas de cada hoja
             errores.extend(self.validar_columnas(indicador, codigo_semana))
+            errores.extend(self.validar_celdas_vacias(indicador, codigo_semana))
 
         return errores
