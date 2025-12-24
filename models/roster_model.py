@@ -18,19 +18,19 @@ class RosterModel:
         ],
         "Sups": [
             "ACM", "Supervisor", "Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday",
-            "Supervisor´s Payroll Number", "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID",
+            "Supervisor´s Payroll Number", "CCMSID", "LOB", "Waha", "RUT / DNI", "RUT2 / CUIL", "Mail", "Log ID",
             "User Tool", "Skill", "Equipo Específico", "Detalle de función", "NT Login", "Start of Vacation",
             "End of Vacations", "Advance Payment", "Comments", "Disponibilidad de horarios"
         ],
         "ACMs": [
             "CCM", "ACM","Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday",
-            "ACM´s Payroll Number", "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID",
+            "ACM´s Payroll Number", "CCMSID", "LOB", "Waha", "DNI / RUT", "CUIL / RUT2", "Mail", "Log ID",
             "User Tool", "Skill", "Equipo Específico", "Detalle de función", "NT Login", "Start of Vacation",
             "End of Vacations", "Advance Payment", "Comments", "Disponibilidad de horarios"
         ],
         "CCMs": [
             "Gerente", "CCM", "Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday",
-            "CCM´s Payroll Number", "CCMSID", "LOB", "WAHA", "RUT / DNI", "RUT 2 / CUIL", "Mail", "Log ID",
+            "CCM´s Payroll Number", "CCMSID", "LOB", "Waha", "DNI / RUT", "CUIL / RUT2", "Mail", "Log ID",
             "User Tool", "Skill", "Equipo Específico", "Detalle de función", "NT Login"
         ]
     }
@@ -101,6 +101,53 @@ class RosterModel:
                             )
         return errores
 
+    def validar_horarios(self, indicador, codigo_semana):
+        """
+        Valida que los valores en el rango de columnas entre Monday y Sunday
+        tengan formato correcto (solo filas desde la 2 en adelante).
+        """
+        errores = []
+
+        # Valores permitidos como texto
+        valores_permitidos = {
+            "LOA", "VAC", "Approved OFF", "OFF", "Training Transfer", "Training NH"
+        }
+        # Formato estricto hh:mm - hh:mm con espacio-guion-espacio
+        patron_hora = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d\s-\s(?:[01]\d|2[0-3]):[0-5]\d$")
+
+        for hoja_base in ["Agents", "Sups", "ACMs", "CCMs"]:
+            nombre_hoja = f"{hoja_base} {indicador} {codigo_semana}"
+            if nombre_hoja in self.dataframes:
+                df = self.dataframes[nombre_hoja]
+
+                columnas = list(df.columns)
+                try:
+                    # Detectar rango horizontal de días por posición
+                    inicio = columnas.index("Monday")
+                    fin = columnas.index("Sunday")
+                    columnas_dias = columnas[inicio:fin+1]
+                except ValueError:
+                    # Si no existen Monday/Sunday, se omite la hoja
+                    continue
+
+                # Validar SOLO filas desde la 2 en adelante (índice >= 1 en pandas)
+                for dia in columnas_dias:
+                    for idx in df.index:
+                        if idx < 1:
+                            continue
+                        valor = df.at[idx, dia]
+                        if pd.isnull(valor) or str(valor).strip() == "":
+                            continue  # vacío lo gestiona validar_celdas_vacias
+                        texto = str(valor).strip()
+                        if texto not in valores_permitidos and not patron_hora.match(texto):
+                            errores.append(
+                                f"Formato inválido en hoja '{nombre_hoja}', fila {idx+2}, columna '{dia}': '{texto}'."
+                            )
+            else:
+                errores.append(f"No se encontró la hoja: {nombre_hoja}")
+
+        return errores
+
     def validar(self):
         errores = []
         indicador, codigo_semana, errores_codigo = self.validar_codigo_archivo()
@@ -123,5 +170,6 @@ class RosterModel:
 
             errores.extend(self.validar_columnas(indicador, codigo_semana))
             errores.extend(self.validar_celdas_vacias(indicador, codigo_semana))
+            errores.extend(self.validar_horarios(indicador, codigo_semana))
 
         return errores
