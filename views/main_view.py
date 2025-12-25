@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
-from tkinterdnd2 import TkinterDnD, DND_FILES
 
-class MainView(TkinterDnD.Tk):
+class MainView(tk.Tk):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
@@ -45,10 +44,6 @@ class MainView(TkinterDnD.Tk):
         self.tree_errores.pack(side="left", expand=True, fill="both")
         scroll_y2.pack(side="right", fill="y")
 
-        # Drag & Drop en tabla de archivos
-        self.tree_archivos.drop_target_register(DND_FILES)
-        self.tree_archivos.dnd_bind('<<Drop>>', self.on_drop)
-
         # Evento al seleccionar archivo
         self.tree_archivos.bind("<<TreeviewSelect>>", self.on_select)
 
@@ -59,10 +54,6 @@ class MainView(TkinterDnD.Tk):
         rutas = filedialog.askopenfilenames(filetypes=[("Archivos Excel", "*.xlsx *.xls")])
         if rutas:
             self.controller.cargar_archivos(rutas)
-
-    def on_drop(self, event):
-        rutas = self.tk.splitlist(event.data)
-        self.controller.cargar_archivos(rutas)
 
     def mostrar_resultados(self, resultados):
         # Limpiar tablas
