@@ -45,10 +45,7 @@ class RosterModel:
         return self.dataframes
 
     def validar_codigo_archivo(self):
-        """
-        Extrae y valida el indicador (PV/Final Roster) y el código de semana en el nombre del archivo.
-        Ejemplo: 'GTD Ventas PV 1229-0104.xlsx' → indicador='PV', codigo='1229-0104'
-        """
+        """Extrae y valida el indicador (PV/Final Roster) y el código de semana en el nombre del archivo."""
         nombre_archivo = self.filepath.split("/")[-1]
         match = re.search(r"(PV|Final Roster)\s+(\d{4}-\d{4})", nombre_archivo)
         if not match:
@@ -102,42 +99,30 @@ class RosterModel:
         return errores
 
     def validar_horarios(self, indicador, codigo_semana):
-        """
-        Valida que los valores en el rango de columnas entre Monday y Sunday
-        tengan formato correcto (solo filas desde la 2 en adelante).
-        """
+        """Valida que los valores en el rango de columnas entre Monday y Sunday tengan formato correcto."""
         errores = []
-
-        # Valores permitidos como texto
-        valores_permitidos = {
-            "LOA", "VAC", "Approved OFF", "OFF", "Training Transfer", "Training NH"
-        }
-        # Formato estricto hh:mm - hh:mm con espacio-guion-espacio
+        valores_permitidos = {"LOA", "VAC", "Approved OFF", "OFF", "Training Transfer", "Training NH"}
         patron_hora = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d\s-\s(?:[01]\d|2[0-3]):[0-5]\d$")
 
         for hoja_base in ["Agents", "Sups", "ACMs", "CCMs"]:
             nombre_hoja = f"{hoja_base} {indicador} {codigo_semana}"
             if nombre_hoja in self.dataframes:
                 df = self.dataframes[nombre_hoja]
-
                 columnas = list(df.columns)
                 try:
-                    # Detectar rango horizontal de días por posición
                     inicio = columnas.index("Monday")
                     fin = columnas.index("Sunday")
                     columnas_dias = columnas[inicio:fin+1]
                 except ValueError:
-                    # Si no existen Monday/Sunday, se omite la hoja
                     continue
 
-                # Validar SOLO filas desde la 2 en adelante (índice >= 1 en pandas)
                 for dia in columnas_dias:
                     for idx in df.index:
                         if idx < 1:
                             continue
                         valor = df.at[idx, dia]
                         if pd.isnull(valor) or str(valor).strip() == "":
-                            continue  # vacío lo gestiona validar_celdas_vacias
+                            continue
                         texto = str(valor).strip()
                         if texto not in valores_permitidos and not patron_hora.match(texto):
                             errores.append(
@@ -145,6 +130,35 @@ class RosterModel:
                             )
             else:
                 errores.append(f"No se encontró la hoja: {nombre_hoja}")
+        return errores
+
+    def validar_horas_programadas(self, indicador, codigo_semana):
+        """
+        Valida que la suma de Mon Hrs. a Sun Hrs. sea igual al valor de Scheduled Hrs.
+        en cada fila de la hoja 'Agents'.
+        """
+        errores = []
+        nombre_hoja = f"Agents {indicador} {codigo_semana}"
+
+        if nombre_hoja in self.dataframes:
+            df = self.dataframes[nombre_hoja]
+            columnas_dias = ["Mon Hrs.", "Tue Hrs.", "Wed Hrs.", "Thu Hrs.", "Fri Hrs.", "Sat Hrs.", "Sun Hrs."]
+
+            if all(col in df.columns for col in columnas_dias) and "Scheduled Hrs." in df.columns:
+                for idx in df.index:
+                    suma_dias = df.loc[idx, columnas_dias].apply(pd.to_numeric, errors="coerce").sum()
+                    total_programado = pd.to_numeric(df.at[idx, "Scheduled Hrs."], errors="coerce")
+
+                    if not pd.isnull(total_programado) and not pd.isnull(suma_dias):
+                        if suma_dias != total_programado:
+                            errores.append(
+                                f"En hoja '{nombre_hoja}', fila {idx+2}: la suma de horas ({suma_dias}) "
+                                f"no coincide con 'Scheduled Hrs.' ({total_programado})."
+                            )
+            else:
+                errores.append(f"En hoja '{nombre_hoja}' faltan columnas de horas o 'Scheduled Hrs.'")
+        else:
+            errores.append(f"No se encontró la hoja: {nombre_hoja}")
 
         return errores
 
@@ -168,8 +182,10 @@ class RosterModel:
                             f"El código del archivo ({codigo_semana}) no coincide con la hoja '{coincidencias[0]}'."
                         )
 
+            # Validaciones principales
             errores.extend(self.validar_columnas(indicador, codigo_semana))
             errores.extend(self.validar_celdas_vacias(indicador, codigo_semana))
             errores.extend(self.validar_horarios(indicador, codigo_semana))
+            errores.extend(self.validar_horas_programadas(indicador, codigo_semana))  # << NUEVA VALIDACIÓN
 
         return errores
