@@ -6,18 +6,30 @@ class MainView(tk.Tk):
         super().__init__()
         self.controller = controller
         self.title("Cargador de Roster")
-        self.geometry("800x500")
-        self.iconbitmap("icono.ico")
+        self.geometry("900x600")
 
-        # Botón para cargar archivos
-        self.btn_cargar = tk.Button(self, text="Seleccionar Excel", command=self.on_cargar_excel)
-        self.btn_cargar.pack(pady=5)
+        # --- Barra superior con botón y contadores ---
+        frame_top = tk.Frame(self)
+        frame_top.pack(fill="x", padx=10, pady=5)
 
-        # Frame principal
+        # Botón
+        self.btn_cargar = tk.Button(frame_top, text="Seleccionar Excel", command=self.on_cargar_excel)
+        self.btn_cargar.pack(side="left", padx=10)
+
+        # Contadores
+        self.lbl_total_cargados = tk.Label(frame_top, text="Total archivos cargados: 0")
+        self.lbl_total_validados = tk.Label(frame_top, text="Total archivos validados: 0")
+        self.lbl_total_errores = tk.Label(frame_top, text="Total archivos con errores: 0")
+
+        self.lbl_total_cargados.pack(side="left", padx=20)
+        self.lbl_total_validados.pack(side="left", padx=20)
+        self.lbl_total_errores.pack(side="left", padx=20)
+
+        # --- Frame principal ---
         frame_main = tk.Frame(self)
         frame_main.pack(expand=True, fill="both", padx=10, pady=10)
 
-        # --- Tabla de archivos ---
+        # Tabla de archivos
         frame_archivos = tk.Frame(frame_main)
         frame_archivos.pack(expand=True, fill="both", pady=(0,10))
 
@@ -32,7 +44,7 @@ class MainView(tk.Tk):
         self.tree_archivos.pack(side="left", expand=True, fill="both")
         scroll_y1.pack(side="right", fill="y")
 
-        # --- Tabla secundaria de errores ---
+        # Tabla secundaria de errores
         frame_errores = tk.Frame(frame_main)
         frame_errores.pack(expand=True, fill="both")
 
@@ -66,10 +78,24 @@ class MainView(tk.Tk):
         self.errores_por_archivo.clear()
 
         # Insertar resultados
+        total_cargados = len(resultados)
+        total_validados = 0
+        total_con_errores = 0
+
         for fila in resultados:
             num, archivo, estado, errores = fila
             self.tree_archivos.insert("", "end", values=(num, archivo, estado))
             self.errores_por_archivo[archivo] = errores
+
+            if estado == "Validado OK":
+                total_validados += 1
+            if errores:
+                total_con_errores += 1
+
+        # Actualizar contadores
+        self.lbl_total_cargados.config(text=f"Total archivos cargados: {total_cargados}")
+        self.lbl_total_validados.config(text=f"Total archivos validados: {total_validados}")
+        self.lbl_total_errores.config(text=f"Total archivos con errores: {total_con_errores}")
 
     def on_select(self, event):
         """Mostrar errores del archivo seleccionado en la tabla secundaria"""
