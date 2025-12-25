@@ -7,6 +7,7 @@ class MainView(tk.Tk):
         self.controller = controller
         self.title("Cargador de Roster")
         self.geometry("800x500")
+        self.iconbitmap("icono.ico")
 
         # Botón para cargar archivos
         self.btn_cargar = tk.Button(self, text="Seleccionar Excel", command=self.on_cargar_excel)
