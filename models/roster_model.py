@@ -77,7 +77,7 @@ class RosterModel:
                 # Validar columnas inesperadas
                 for col in columnas_reales:
                     if col not in columnas and all(col.lower().strip() != esperado.lower() for esperado in columnas):
-                        errores.append(f"En hoja '{nombre_hoja}' existe columna inesperada: {col}")
+                        errores.append(f"En hoja '{nombre_hoja}' existe columna con un nombre distinto al esperado: {col}")
             else:
                 errores.append(f"No se encontró la hoja: {nombre_hoja}")
         return errores
