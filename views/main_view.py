@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 
 class MainView(tk.Tk):
     def __init__(self, controller):
@@ -8,13 +8,17 @@ class MainView(tk.Tk):
         self.title("Cargador de Roster")
         self.geometry("900x600")
 
-        # --- Barra superior con botón y contadores ---
+        # --- Barra superior con botones y contadores ---
         frame_top = tk.Frame(self)
         frame_top.pack(fill="x", padx=10, pady=5)
 
-        # Botón
+        # Botón cargar
         self.btn_cargar = tk.Button(frame_top, text="Seleccionar Excel", command=self.on_cargar_excel)
         self.btn_cargar.pack(side="left", padx=10)
+
+        # Botón consolidar
+        self.btn_consolidar = tk.Button(frame_top, text="Generar consolidado", command=self.on_generar_consolidado)
+        self.btn_consolidar.pack(side="left", padx=10)
 
         # Contadores
         self.lbl_total_cargados = tk.Label(frame_top, text="Total archivos cargados: 0")
@@ -63,10 +67,20 @@ class MainView(tk.Tk):
         # Diccionario para guardar errores por archivo
         self.errores_por_archivo = {}
 
+    # --- Métodos de interacción ---
     def on_cargar_excel(self):
         rutas = filedialog.askopenfilenames(filetypes=[("Archivos Excel", "*.xlsx *.xls")])
         if rutas:
             self.controller.cargar_archivos(rutas)
+
+    def on_generar_consolidado(self): 
+        """Invoca al controlador para generar el consolidado""" 
+        ruta_salida = filedialog.asksaveasfilename( 
+            defaultextension=".xlsx", 
+            filetypes=[("Archivos Excel", "*.xlsx")], 
+            title="Guardar consolidado como..." ) 
+        if ruta_salida: 
+            self.controller.generar_consolidado(ruta_salida)
 
     def mostrar_resultados(self, resultados):
         # Limpiar tablas
@@ -96,6 +110,10 @@ class MainView(tk.Tk):
         self.lbl_total_cargados.config(text=f"Total archivos cargados: {total_cargados}")
         self.lbl_total_validados.config(text=f"Total archivos validados: {total_validados}")
         self.lbl_total_errores.config(text=f"Total archivos con errores: {total_con_errores}")
+
+    def mostrar_mensaje(self, mensaje):
+        """Muestra un mensaje emergente al usuario"""
+        messagebox.showinfo("Información", mensaje)
 
     def on_select(self, event):
         """Mostrar errores del archivo seleccionado en la tabla secundaria"""

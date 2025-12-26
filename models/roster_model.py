@@ -134,8 +134,7 @@ class RosterModel:
 
     def validar_horas_programadas(self, indicador, codigo_semana):
         """
-        Valida que la suma de Mon Hrs. a Sun Hrs. sea igual al valor de Scheduled Hrs.
-        en cada fila de la hoja 'Agents'.
+        Valida que la suma de Mon Hrs. a Sun Hrs. sea igual a Scheduled Hrs. en 'Agents'.
         """
         errores = []
         nombre_hoja = f"Agents {indicador} {codigo_semana}"
@@ -163,6 +162,9 @@ class RosterModel:
         return errores
 
     def validar(self):
+        """
+        Ejecuta todas las validaciones y devuelve la lista de errores.
+        """
         errores = []
         indicador, codigo_semana, errores_codigo = self.validar_codigo_archivo()
         errores.extend(errores_codigo)
@@ -186,6 +188,39 @@ class RosterModel:
             errores.extend(self.validar_columnas(indicador, codigo_semana))
             errores.extend(self.validar_celdas_vacias(indicador, codigo_semana))
             errores.extend(self.validar_horarios(indicador, codigo_semana))
-            errores.extend(self.validar_horas_programadas(indicador, codigo_semana))  # << NUEVA VALIDACIÓN
+            errores.extend(self.validar_horas_programadas(indicador, codigo_semana))
 
         return errores
+
+    def clasificar_archivo(self, nombre_hoja, df):
+        """
+        Clasifica un DataFrame según el tipo de hoja base (Agents, Sups, ACMs, CCMs).
+        Devuelve: (categoria, df)
+        """
+        if nombre_hoja.startswith("Agents"):
+            return "Agents", df
+        elif nombre_hoja.startswith("Sups"):
+            return "Sups", df
+        elif nombre_hoja.startswith("ACMs"):
+            return "ACMs", df
+        elif nombre_hoja.startswith("CCMs"):
+            return "CCMs", df
+        else:
+            return None, df
+
+    def consolidar_por_grupo(self, dfs_agents, dfs_sups, dfs_acms, dfs_ccms, salida="consolidado.xlsx"):
+        """
+        Consolida listas de DataFrames por grupo y genera un Excel con 4 hojas:
+        Agents, Sups, ACMs y CCMs.
+        """
+        with pd.ExcelWriter(salida, engine="openpyxl") as writer:
+            if dfs_agents:
+                pd.concat(dfs_agents, ignore_index=True).to_excel(writer, sheet_name="Agents", index=False)
+            if dfs_sups:
+                pd.concat(dfs_sups, ignore_index=True).to_excel(writer, sheet_name="Sups", index=False)
+            if dfs_acms:
+                pd.concat(dfs_acms, ignore_index=True).to_excel(writer, sheet_name="ACMs", index=False)
+            if dfs_ccms:
+                pd.concat(dfs_ccms, ignore_index=True).to_excel(writer, sheet_name="CCMs", index=False)
+
+        return f"✅ Consolidado generado en {salida}"
